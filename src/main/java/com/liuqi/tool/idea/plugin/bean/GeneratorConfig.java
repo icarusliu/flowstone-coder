@@ -26,7 +26,7 @@ public class GeneratorConfig {
     public static GeneratorConfig load(Project project) {
         PsiFile[] files = PsiShortNamesCache.getInstance(project).getFilesByName("config.yaml");
         for (PsiFile file : files) {
-            if (!file.getContainingDirectory().getName().equals("coder-generator")) {
+            if (!file.getContainingDirectory().getName().equals("code-generator")) {
                 continue;
             }
 

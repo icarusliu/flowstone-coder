@@ -58,7 +58,7 @@ public class PsiUtils {
         PsiFile[] files = PsiShortNamesCache.getInstance(project).getFilesByName(className + ".yaml");
         ClassDefiner definer = new ClassDefiner();
         for (PsiFile file : files) {
-            if (!file.getContainingDirectory().getName().equals("coder-generator")) {
+            if (!file.getContainingDirectory().getName().equals("code-generator")) {
                 continue;
             }
 
