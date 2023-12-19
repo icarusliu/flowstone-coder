@@ -63,13 +63,12 @@ public abstract class AbstractAnAction extends AnAction {
         }
 
         PsiFile psiFile = PsiDocumentManager.getInstance(project).getPsiFile(editor.getDocument());
-        if (!(psiFile instanceof PsiJavaFile)) {
+        if (!(psiFile instanceof PsiJavaFile javaFile)) {
             // 不是Java类，不做处理
             this.showError("只能处理Java类");
             return null;
         }
 
-        PsiJavaFile javaFile = (PsiJavaFile) psiFile;
         PsiClass[] classes = javaFile.getClasses();
         if (0 == classes.length) {
             this.showError("未打开任何Java类");

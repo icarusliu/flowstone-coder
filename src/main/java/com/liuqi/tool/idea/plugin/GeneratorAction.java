@@ -1,8 +1,6 @@
 package com.liuqi.tool.idea.plugin;
 
 import com.intellij.openapi.actionSystem.AnActionEvent;
-import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiDirectory;
 import com.liuqi.tool.idea.plugin.bean.ClassDefiner;
@@ -39,16 +37,17 @@ public class GeneratorAction extends AbstractAnAction {
             return;
         }
 
-        if (null == aClass.getAnnotation("com.baomidou.mybatisplus.annotation.TableName")) {
-            // 只处理MyBatisPlus TableName注解的类
-            this.showError("只能处理被TableName注解的Java类");
-            return;
-        }
-
         // 加载生成配置
         config = GeneratorConfig.load(project);
         if (CollectionUtils.isEmpty(config.getClasses())) {
             this.showError("config.yaml中未配置classes清单");
+            return;
+        }
+
+        // 如果有预期的注解，那么不包含该注解的类将不做处理，避免处理错误
+        String expectAnnotation = config.getExpectAnnotation();
+        if (StringUtils.isNotBlank(expectAnnotation) && null == aClass.getAnnotation(expectAnnotation)) {
+            this.showError("只能处理被" + expectAnnotation + "注解的Java类");
             return;
         }
 
@@ -90,6 +89,8 @@ public class GeneratorAction extends AbstractAnAction {
                         .importClass(imports)
                         .copyFields(like)
                         .addTo(directory);
+            } else {
+                this.showError(clazz + "未配置所在包名");
             }
         });
     }

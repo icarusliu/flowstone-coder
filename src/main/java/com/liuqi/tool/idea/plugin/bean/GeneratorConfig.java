@@ -34,17 +34,30 @@ public class GeneratorConfig {
             log.debug("加载配置：{}", obj);
 
             GeneratorConfig config = new GeneratorConfig();
-            config.setClasses((List<String>) obj.get("classes"));
-            config.setBasePackage(MapUtils.getString(obj, "basePackage"));
+            config.setClasses((List<String>) obj.get("classes"))
+                    .setBasePackage(MapUtils.getString(obj, "basePackage"))
+                    .setExpectAnnotation(MapUtils.getString(obj, "expectAnnotation"));
             return config;
         }
 
         return new GeneratorConfig();
     }
 
+    /**
+     * 生成类所在包
+     */
     private String basePackage;
 
+    /**
+     * 生成类列表
+     */
     private List<String> classes;
+
+    /**
+     * 目标类预期的注解
+     * 有这个注解的才会进行处理
+     */
+    private String expectAnnotation;
 
     public String getBasePackage() {
         return basePackage;
@@ -61,6 +74,15 @@ public class GeneratorConfig {
 
     public GeneratorConfig setClasses(List<String> classes) {
         this.classes = classes;
+        return this;
+    }
+
+    public String getExpectAnnotation() {
+        return expectAnnotation;
+    }
+
+    public GeneratorConfig setExpectAnnotation(String expectAnnotation) {
+        this.expectAnnotation = expectAnnotation;
         return this;
     }
 }
