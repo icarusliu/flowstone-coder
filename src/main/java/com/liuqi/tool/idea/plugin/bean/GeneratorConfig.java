@@ -36,7 +36,8 @@ public class GeneratorConfig {
             GeneratorConfig config = new GeneratorConfig();
             config.setClasses((List<String>) obj.get("classes"))
                     .setBasePackage(MapUtils.getString(obj, "basePackage"))
-                    .setExpectAnnotation(MapUtils.getString(obj, "expectAnnotation"));
+                    .setExpectAnnotation(MapUtils.getString(obj, "expectAnnotation"))
+                    .setCommentAnnotation(MapUtils.getString(obj, "commentAnnotation"));
             return config;
         }
 
@@ -58,6 +59,11 @@ public class GeneratorConfig {
      * 有这个注解的才会进行处理
      */
     private String expectAnnotation;
+
+    /**
+     * 注释注解，用于生成代码的类注释
+     */
+    private String commentAnnotation;
 
     public String getBasePackage() {
         return basePackage;
@@ -83,6 +89,15 @@ public class GeneratorConfig {
 
     public GeneratorConfig setExpectAnnotation(String expectAnnotation) {
         this.expectAnnotation = expectAnnotation;
+        return this;
+    }
+
+    public String getCommentAnnotation() {
+        return commentAnnotation;
+    }
+
+    public GeneratorConfig setCommentAnnotation(String commentAnnotation) {
+        this.commentAnnotation = commentAnnotation;
         return this;
     }
 }

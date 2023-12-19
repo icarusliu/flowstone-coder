@@ -1,6 +1,8 @@
 package com.liuqi.tool.idea.plugin;
 
 import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.psi.PsiAnnotation;
+import com.intellij.psi.PsiAnnotationMemberValue;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiDirectory;
 import com.liuqi.tool.idea.plugin.bean.ClassDefiner;
@@ -14,7 +16,10 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -58,6 +63,14 @@ public class GeneratorAction extends AbstractAnAction {
             return;
         }
 
+        String comment = "";
+        if (StringUtils.isNotBlank(config.getCommentAnnotation())) {
+            PsiAnnotation commentAnnotation = aClass.getAnnotation(config.getCommentAnnotation());
+            comment = psiUtils.getAnnotationValue(commentAnnotation, "value")
+                    .orElse("");
+        }
+        String pComment = comment;
+
         // 获取当前实体所在目录的上两级目录，需要严格按说明中的目录组织，其它目录不考虑
         workDir = this.getWorkDir(aClass);
 
@@ -77,6 +90,9 @@ public class GeneratorAction extends AbstractAnAction {
                 String like = Optional.ofNullable(definer.getLike())
                         .map(str -> str.replaceAll("\\$T\\$", entityName))
                         .orElse(null);
+
+                // 增加注释
+                content = this.getContent(pComment) + content;
 
                 log.info("准备生成类，名称：{}, 包：{}", name, cPackage);
 
@@ -105,5 +121,10 @@ public class GeneratorAction extends AbstractAnAction {
         }
 
         return directory;
+    }
+
+    private String getContent(String cName) {
+        return "/** " + cName + " \n * @author Coder Generator"
+                + " " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + " **/\n";
     }
 }
