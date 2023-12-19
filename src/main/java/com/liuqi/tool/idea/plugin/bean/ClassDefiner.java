@@ -16,6 +16,8 @@ public class ClassDefiner {
 
     private String template;
 
+    private String comment;
+
     public String getName() {
         return name;
     }
@@ -58,6 +60,15 @@ public class ClassDefiner {
 
     public ClassDefiner setTemplate(String template) {
         this.template = template;
+        return this;
+    }
+
+    public String getComment() {
+        return comment;
+    }
+
+    public ClassDefiner setComment(String comment) {
+        this.comment = comment;
         return this;
     }
 }

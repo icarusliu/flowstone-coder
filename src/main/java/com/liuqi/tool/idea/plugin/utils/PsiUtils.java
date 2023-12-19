@@ -69,7 +69,8 @@ public class PsiUtils {
                     .setName(MapUtils.getString(obj, "name"))
                     .setImports((List<String>) obj.get("imports"))
                     .setLike(MapUtils.getString(obj, "like"))
-                    .setTemplate(MapUtils.getString(obj, "template"));
+                    .setTemplate(MapUtils.getString(obj, "template"))
+                    .setComment(MapUtils.getString(obj, "comment"));
 
             return definer;
         }

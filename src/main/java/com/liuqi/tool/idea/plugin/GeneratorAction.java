@@ -67,7 +67,8 @@ public class GeneratorAction extends AbstractAnAction {
         if (StringUtils.isNotBlank(config.getCommentAnnotation())) {
             PsiAnnotation commentAnnotation = aClass.getAnnotation(config.getCommentAnnotation());
             comment = psiUtils.getAnnotationValue(commentAnnotation, "value")
-                    .orElse("");
+                    .orElse("")
+                    .replaceAll("\"", "");
         }
         String pComment = comment;
 
@@ -92,7 +93,7 @@ public class GeneratorAction extends AbstractAnAction {
                         .orElse(null);
 
                 // 增加注释
-                content = this.getContent(pComment) + content;
+                content = this.getContent(pComment + Optional.ofNullable(definer.getComment()).orElse("")) + content;
 
                 log.info("准备生成类，名称：{}, 包：{}", name, cPackage);
 
