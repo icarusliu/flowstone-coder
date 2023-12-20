@@ -2,6 +2,7 @@ package com.liuqi.tool.idea.plugin;
 
 import com.intellij.lang.xml.XMLLanguage;
 import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
@@ -144,14 +145,14 @@ public class GeneratorAction extends AbstractAnAction {
                 });
 
         StringBuilder sb = new StringBuilder();
-        sb.append("create table ")
+        sb.append("\ncreate table ")
                 .append(tableName)
-                .append("(");
+                .append("(\n");
 
         PsiField @NotNull [] allFields = aClass.getAllFields();
         for (int i = 0; i < allFields.length; i++) {
             PsiField field = allFields[i];
-            String name = field.getName();
+            String name = MyStringUtils.toUnderLineStr(field.getName());
             PsiType type = field.getType();
             sb.append(name).append(" ");
             if (type.equals(byteType())) {
@@ -173,9 +174,10 @@ public class GeneratorAction extends AbstractAnAction {
             }
 
             if (i != allFields.length - 1) {
-                sb.append(",");
+                sb.append(",\n");
             }
         }
+        sb.append("\n)");
 
         // 写到liquibase文件中去
         String liquibaseFile = config.getLiquibaseFile();
@@ -200,12 +202,20 @@ public class GeneratorAction extends AbstractAnAction {
             directory.add(resultFile);
         } else {
             XmlTag rootTag = document.getRootTag();
+
             XmlTag changeSet = rootTag.createChildTag("changeSet", null, null, false);
             changeSet.setAttribute("id", "create-table-" + tableName);
             changeSet.setAttribute("author", "codeGenerator");
             XmlTag sqlTag = changeSet.createChildTag("sql", null, null, false);
             XmlText text = XmlElementFactory.getInstance(project).createDisplayText(sb.toString());
             sqlTag.add(text);
+            changeSet.add(sqlTag);
+            WriteCommandAction.runWriteCommandAction(project, () -> {
+                rootTag.add(changeSet);
+                psiUtils.format(psiFile);
+                psiFile.delete();
+                directory.add(psiFile);
+            });
         }
     }
 
