@@ -1,6 +1,5 @@
 package com.liuqi.tool.idea.plugin.utils;
 
-import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.fileTypes.FileTypes;
 import com.intellij.openapi.module.Module;
@@ -15,9 +14,9 @@ import com.intellij.psi.impl.file.PsiDirectoryFactory;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.search.PsiShortNamesCache;
 import com.liuqi.tool.idea.plugin.bean.ClassDefiner;
-import com.liuqi.tool.idea.plugin.bean.GeneratorConfig;
 import org.apache.commons.collections.MapUtils;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.jps.model.java.JavaModuleSourceRootTypes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -129,7 +128,7 @@ public class PsiUtils {
         return Optional.ofNullable(annotation).map(a -> {
             PsiAnnotationMemberValue value = a.findAttributeValue(field);
             if (null != value) {
-                return Optional.of(value.getText());
+                return Optional.of(value.getText().replaceAll("\"", ""));
             } else {
                 return Optional.<String>empty();
             }
@@ -318,5 +317,66 @@ public class PsiUtils {
                 "() {return this." +
                 name +
                 ";}";
+    }
+
+    /**
+     * 获取资源目录
+     */
+    private @Nullable VirtualFile getResourceRoot() {
+        List<VirtualFile> files = ModuleRootManager.getInstance(this.module)
+                .getSourceRoots(JavaModuleSourceRootTypes.RESOURCES);
+        if (files.isEmpty()) {
+            return null;
+        }
+
+        return files.get(0);
+    }
+
+    /**
+     * 获取资源文件
+     */
+    public VirtualFile getResourceFile(String fileName) {
+        VirtualFile root = this.getResourceRoot();
+        if (null == root) {
+            return null;
+        }
+        return root.findFileByRelativePath(fileName);
+    }
+
+    /**
+     * 获取resource目录下的子目录
+     */
+    public PsiDirectory getResourceDir(String dir) {
+        // 如果dir包含有文件名，需要移除
+        if (dir.contains(".")) {
+            dir = dir.substring(0, dir.lastIndexOf("/"));
+        }
+        VirtualFile root = this.getResourceRoot();
+        VirtualFile child = root.findChild(dir);
+        if (null == child) {
+            try {
+                child = root.createChildDirectory(this, dir);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        return PsiDirectoryFactory.getInstance(this.project).createDirectory(child);
+    }
+
+    /**
+     * 获取或者创建资源文件
+     * @param fileName 包含路径的文件名
+     * @return 创建的资源文件
+     */
+    public PsiFile getOrCreateResourceFile(String fileName) {
+        PsiDirectory directory = this.getResourceDir(fileName);
+        fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
+        PsiFile file = directory.findFile(fileName);
+        if (null == file) {
+            file = directory.createFile(fileName);
+        }
+
+        return file;
     }
 }

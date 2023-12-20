@@ -36,8 +36,10 @@ public class GeneratorConfig {
             GeneratorConfig config = new GeneratorConfig();
             config.setClasses((List<String>) obj.get("classes"))
                     .setBasePackage(MapUtils.getString(obj, "basePackage"))
-                    .setExpectAnnotation(MapUtils.getString(obj, "expectAnnotation"))
-                    .setCommentAnnotation(MapUtils.getString(obj, "commentAnnotation"));
+                    .setTableAnnotation(MapUtils.getString(obj, "tableAnnotation"))
+                    .setCommentAnnotation(MapUtils.getString(obj, "commentAnnotation"))
+                    .setWithLiquibase(MapUtils.getBooleanValue(obj, "withLiquibase", false))
+                    .setLiquibaseFile(MapUtils.getString(obj, "liquibaseFile", "liquibase/master.xml"));
             return config;
         }
 
@@ -58,12 +60,22 @@ public class GeneratorConfig {
      * 目标类预期的注解
      * 有这个注解的才会进行处理
      */
-    private String expectAnnotation;
+    private String tableAnnotation;
 
     /**
      * 注释注解，用于生成代码的类注释
      */
     private String commentAnnotation;
+
+    /**
+     * 是否包含liquibase
+     */
+    private Boolean withLiquibase = false;
+
+    /**
+     * withLiquibase为true时生效；liquibase的生成语句保存文件，不配置则默认是liquibase/master.xml
+     */
+    private String liquibaseFile = "liquibase/master.xml";
 
     public String getBasePackage() {
         return basePackage;
@@ -83,12 +95,12 @@ public class GeneratorConfig {
         return this;
     }
 
-    public String getExpectAnnotation() {
-        return expectAnnotation;
+    public String getTableAnnotation() {
+        return tableAnnotation;
     }
 
-    public GeneratorConfig setExpectAnnotation(String expectAnnotation) {
-        this.expectAnnotation = expectAnnotation;
+    public GeneratorConfig setTableAnnotation(String tableAnnotation) {
+        this.tableAnnotation = tableAnnotation;
         return this;
     }
 
@@ -98,6 +110,24 @@ public class GeneratorConfig {
 
     public GeneratorConfig setCommentAnnotation(String commentAnnotation) {
         this.commentAnnotation = commentAnnotation;
+        return this;
+    }
+
+    public Boolean getWithLiquibase() {
+        return withLiquibase;
+    }
+
+    public GeneratorConfig setWithLiquibase(Boolean withLiquibase) {
+        this.withLiquibase = withLiquibase;
+        return this;
+    }
+
+    public String getLiquibaseFile() {
+        return liquibaseFile;
+    }
+
+    public GeneratorConfig setLiquibaseFile(String liquibaseFile) {
+        this.liquibaseFile = liquibaseFile;
         return this;
     }
 }

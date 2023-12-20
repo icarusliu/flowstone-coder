@@ -1,10 +1,11 @@
 package com.liuqi.tool.idea.plugin;
 
+import com.intellij.lang.xml.XMLLanguage;
 import com.intellij.openapi.actionSystem.AnActionEvent;
-import com.intellij.psi.PsiAnnotation;
-import com.intellij.psi.PsiAnnotationMemberValue;
-import com.intellij.psi.PsiClass;
-import com.intellij.psi.PsiDirectory;
+import com.intellij.openapi.fileTypes.FileType;
+import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.psi.*;
+import com.intellij.psi.xml.*;
 import com.liuqi.tool.idea.plugin.bean.ClassDefiner;
 import com.liuqi.tool.idea.plugin.bean.GeneratorConfig;
 import com.liuqi.tool.idea.plugin.utils.ClassCreator;
@@ -12,16 +13,21 @@ import com.liuqi.tool.idea.plugin.utils.MyStringUtils;
 import com.liuqi.tool.idea.plugin.utils.PsiUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.xmlbeans.XmlLanguage;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import static com.intellij.psi.PsiType.BYTE;
+import static com.intellij.psi.PsiTypes.*;
 
 /**
  * 实体类代码创建器
@@ -57,7 +63,7 @@ public class GeneratorAction extends AbstractAnAction {
         }
 
         // 如果有预期的注解，那么不包含该注解的类将不做处理，避免处理错误
-        String expectAnnotation = config.getExpectAnnotation();
+        String expectAnnotation = config.getTableAnnotation();
         if (StringUtils.isNotBlank(expectAnnotation) && null == aClass.getAnnotation(expectAnnotation)) {
             this.showError("只能处理被" + expectAnnotation + "注解的Java类");
             return;
@@ -117,6 +123,90 @@ public class GeneratorAction extends AbstractAnAction {
                 this.showError(clazz + "未配置所在包名");
             }
         });
+
+        // 根据是否生成liquibase来决定是否生成对应语句
+        this.generateLiquibase(config, aClass);
+    }
+
+    /**
+     * 生成Liquibase建表语句
+     */
+    private void generateLiquibase(GeneratorConfig config, PsiClass aClass) {
+        if (!config.getWithLiquibase()) {
+            return;
+        }
+
+        // 根据字段生成建表语句，表名从Table或者TableName中获取
+        String tableName = psiUtils.getAnnotationValue(aClass.getAnnotation(config.getTableAnnotation()), "value")
+                .orElseGet(() -> {
+                   String name = aClass.getName().replace("Entity", "");
+                   return MyStringUtils.toUnderLineStr(name);
+                });
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("create table ")
+                .append(tableName)
+                .append("(");
+
+        PsiField @NotNull [] allFields = aClass.getAllFields();
+        for (int i = 0; i < allFields.length; i++) {
+            PsiField field = allFields[i];
+            String name = field.getName();
+            PsiType type = field.getType();
+            sb.append(name).append(" ");
+            if (type.equals(byteType())) {
+                sb.append("bit default 0");
+            } else if (type.equals(charType())) {
+                sb.append("varchar(8)");
+            } else if (type.equals(doubleType()) || type.equals(floatType())) {
+                sb.append("numeric(24, 4)");
+            } else if (type.equals(intType()) || type.equals(shortType())) {
+                sb.append("integer");
+            } else if (type.equals(longType())) {
+                sb.append("bigint");
+            } else {
+                sb.append("varchar(255)");
+            }
+
+            if (name.equals("id")) {
+                sb.append(" primary key");
+            }
+
+            if (i != allFields.length - 1) {
+                sb.append(",");
+            }
+        }
+
+        // 写到liquibase文件中去
+        String liquibaseFile = config.getLiquibaseFile();
+        String fileName = liquibaseFile.substring(liquibaseFile.lastIndexOf(File.separator) + 1);
+        PsiDirectory directory = psiUtils.getResourceDir(liquibaseFile);
+        PsiFile psiFile = psiUtils.getOrCreateResourceFile(liquibaseFile);
+        XmlFile file = (XmlFile) psiFile;
+        XmlDocument document = file.getDocument();
+        if (null == document) {
+            // 无内容，需要增加内容
+            String content = "<databaseChangeLog\n" +
+                    "        xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n" +
+                    "        xmlns=\"http://www.liquibase.org/xml/ns/dbchangelog\"\n" +
+                    "        xsi:schemaLocation=\"http://www.liquibase.org/xml/ns/dbchangelog\n" +
+                    "        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd\">";
+            content +="<changeSet id=\"init-user\" author=\"test\">\n" +
+                    "        <sql>";
+            content += sb + "</sql></changeSet></databaseChangeLog>";
+            PsiFile resultFile = PsiFileFactory.getInstance(this.project)
+                    .createFileFromText(fileName, XMLLanguage.INSTANCE, content);
+            psiUtils.format(resultFile);
+            directory.add(resultFile);
+        } else {
+            XmlTag rootTag = document.getRootTag();
+            XmlTag changeSet = rootTag.createChildTag("changeSet", null, null, false);
+            changeSet.setAttribute("id", "create-table-" + tableName);
+            changeSet.setAttribute("author", "codeGenerator");
+            XmlTag sqlTag = changeSet.createChildTag("sql", null, null, false);
+            XmlText text = XmlElementFactory.getInstance(project).createDisplayText(sb.toString());
+            sqlTag.add(text);
+        }
     }
 
     /**
