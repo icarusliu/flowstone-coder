@@ -30,7 +30,14 @@ import java.util.stream.Collectors;
  * @version V1.0
  **/
 public class GeneratorAction extends AbstractAnAction {
+    /**
+     * 工作目录
+     */
     private PsiDirectory workDir;
+
+    /**
+     * 生成主配置
+     */
     private GeneratorConfig config;
 
     private static final Logger log = LoggerFactory.getLogger(GeneratorAction.class);

@@ -8,6 +8,16 @@ group = "com.liuqi"
 version = "1.0-SNAPSHOT"
 
 repositories {
+  maven {
+    setUrl("https://maven.aliyun.com/repository/public/")
+  }
+  maven {
+    setUrl("https://maven.aliyun.com/repository/spring/")
+  }
+  maven {
+    setUrl("https://maven.aliyun.com/repository/gradle-plugin/")
+  }
+  mavenLocal()
   mavenCentral()
 }
 
@@ -18,7 +28,7 @@ java {
 // Configure Gradle IntelliJ Plugin
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
 intellij {
-  version.set("2023.1.5")
+  version.set("2023.3.1")
   type.set("IC") // Target IDE Platform
 
   plugins.set(listOf("java"))
