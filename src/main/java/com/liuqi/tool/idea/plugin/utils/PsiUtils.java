@@ -77,6 +77,9 @@ public class PsiUtils {
         return definer;
     }
 
+    /**
+     * 引入类
+     */
     public void importClass(PsiClass srcClass, PsiClass... toImportClasses) {
         for (PsiClass toImportClass : toImportClasses) {
             if (null == toImportClass) {
@@ -87,6 +90,9 @@ public class PsiUtils {
         }
     }
 
+    /**
+     * 在资源目录(resources）下创建文件
+     */
     public void createResourceFile(String dirName, String fileName, String content) {
         // 获取目录，在resources目录下，如果没有这个目录，那么创建一个目录
         ModuleRootManager rootManager = ModuleRootManager.getInstance(module);
@@ -109,10 +115,16 @@ public class PsiUtils {
         psiDirectory.add(file);
     }
 
+    /**
+     * 获取类所在包名
+     */
     public String getPackageName(PsiClass psiClass) {
         return ((PsiJavaFile)psiClass.getContainingFile()).getPackageName();
     }
 
+    /**
+     * 获取注解属性值
+     */
     public Optional<String> getAnnotationValue(PsiClass psiClass, String annotation, String field) {
         return Optional.ofNullable(psiClass.getAnnotation(annotation)).map(a -> {
             PsiAnnotationMemberValue value = a.findAttributeValue(field);
@@ -124,6 +136,9 @@ public class PsiUtils {
         }).orElse(Optional.empty());
     }
 
+    /**
+     * 获取注解属性值
+     */
     public Optional<String> getAnnotationValue(PsiAnnotation annotation, String field) {
         return Optional.ofNullable(annotation).map(a -> {
             PsiAnnotationMemberValue value = a.findAttributeValue(field);
@@ -135,26 +150,41 @@ public class PsiUtils {
         }).orElse(Optional.empty());
     }
 
+    /**
+     * 获取注解属性值
+     */
     public Optional<String> getAnnotationValue(PsiFile psiFile, String annotation, String field) {
         return getAnnotationValue(((PsiJavaFile)psiFile).getClasses()[0], annotation, field);
     }
 
+    /**
+     * 获取所在包及类名
+     */
     public String getPackageAndName(PsiClass psiClass) {
         return ((PsiJavaFile)psiClass.getContainingFile()).getPackageName().concat(".").concat(psiClass.getName());
     }
 
+    /**
+     * 添加注解
+     */
     public PsiAnnotation addAnnotation(PsiClass psiClass, String annotation) {
         PsiAnnotation psiAnnotation = Objects.requireNonNull(psiClass.getModifierList()).addAnnotation(annotation);
         JavaCodeStyleManager.getInstance(project).shortenClassReferences(psiAnnotation);
         return psiAnnotation;
     }
 
+    /**
+     * 为字段添加注解
+     */
     public PsiAnnotation addAnnotation(PsiField field, String annotation) {
         PsiAnnotation psiAnnotation = field.getModifierList().addAnnotation(annotation);
         JavaCodeStyleManager.getInstance(project).shortenClassReferences(psiAnnotation);
         return psiAnnotation;
     }
 
+    /**
+     * 为类添加注解
+     */
     public PsiElement addAnnotationFromStrAfter(PsiClass psiElement, String content, PsiElement posElement) {
         PsiAnnotation psiAnnotation = PsiElementFactory.getInstance(project).createAnnotationFromText(content, null);
         PsiModifierList psiModifierList = psiElement.getModifierList();
@@ -164,6 +194,9 @@ public class PsiUtils {
         return addResult;
     }
 
+    /**
+     * 添加注解
+     */
     public void addAnnotationFromStrAfter(PsiField psiElement, String content, PsiElement posElement) {
         PsiAnnotation psiAnnotation = PsiElementFactory.getInstance(project).createAnnotationFromText(content, null);
         PsiModifierList psiModifierList = psiElement.getModifierList();
@@ -171,6 +204,9 @@ public class PsiUtils {
         JavaCodeStyleManager.getInstance(project).shortenClassReferences(psiAnnotation);
     }
 
+    /**
+     * 添加注解
+     */
     public void addAnnotationFromStrFirst(PsiField psiElement, String content) {
         PsiAnnotation psiAnnotation = PsiElementFactory.getInstance(project).createAnnotationFromText(content, null);
         PsiModifierList psiModifierList = psiElement.getModifierList();
@@ -197,6 +233,9 @@ public class PsiUtils {
         return findClass(className, psiClass -> true);
     }
 
+    /**
+     * 根据条件查找类
+     */
     public Optional<PsiClass> findClass(String className, Predicate<PsiClass> predicate) {
         PsiShortNamesCache shortNamesCache = PsiShortNamesCache.getInstance(project);
 
@@ -206,21 +245,17 @@ public class PsiUtils {
             String name = className.substring(idx + 1);
             PsiClass[] classes = shortNamesCache.getClassesByName(name, GlobalSearchScope.allScope(project));
 
-            if (0 != classes.length) {
-                for (PsiClass aClass : classes) {
-                    PsiJavaFile javaFile = (PsiJavaFile) aClass.getContainingFile();
-                    if (javaFile.getPackageName().equals(packageName) && predicate.test(aClass)) {
-                        return Optional.of(aClass);
-                    }
+            for (PsiClass aClass : classes) {
+                PsiJavaFile javaFile = (PsiJavaFile) aClass.getContainingFile();
+                if (javaFile.getPackageName().equals(packageName) && predicate.test(aClass)) {
+                    return Optional.of(aClass);
                 }
             }
         } else {
             PsiClass[] classes = shortNamesCache.getClassesByName(className, GlobalSearchScope.allScope(project));
-            if (0 != classes.length) {
-                for (PsiClass aClass : classes) {
-                    if (predicate.test(aClass)) {
-                        return Optional.ofNullable(aClass);
-                    }
+            for (PsiClass aClass : classes) {
+                if (predicate.test(aClass)) {
+                    return Optional.ofNullable(aClass);
                 }
             }
         }
@@ -276,6 +311,9 @@ public class PsiUtils {
         }
     }
 
+    /**
+     * 创建Builder类型的Setter方法
+     */
     private String createBuilderSetter(String className, String name, String type) {
         return "public " +
                 className +
@@ -294,6 +332,9 @@ public class PsiUtils {
                 "return this;}";
     }
 
+    /**
+     * 创建Getter方法
+     */
     private String createSetter(@NotNull String name, String type) {
         return "public void set" +
                 name.substring(0, 1).toUpperCase() + name.substring(1) +
@@ -309,6 +350,9 @@ public class PsiUtils {
                 ";}";
     }
 
+    /**
+     * 创建Getter方法
+     */
     private String createGetter(String name, String type) {
         return "public " +
                 type +
