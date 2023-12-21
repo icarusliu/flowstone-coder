@@ -150,9 +150,26 @@ public class GeneratorAction extends AbstractAnAction {
                 .append("(\n");
 
         PsiField @NotNull [] allFields = aClass.getAllFields();
+
+        // id特殊处理，并放在第一个
+        PsiField idField = aClass.findFieldByName("id", true);
+        if (null != idField) {
+            PsiType type = idField.getType();
+            if (type.getCanonicalText().contains("Long")) {
+                sb.append("id bigint not null primary key auto_increment comment '主键',\n");
+            } else {
+                sb.append("id varchar(64) not null primary key comment '主键', \n");
+            }
+        }
+
+        // 处理剩余字段
         for (int i = 0; i < allFields.length; i++) {
             PsiField field = allFields[i];
             String name = MyStringUtils.toUnderLineStr(field.getName());
+            if (name.equals("id")) {
+                continue;
+            }
+
             PsiType type = field.getType();
             String typeName = type.getCanonicalText();
             if (typeName.contains(".")) {
@@ -166,18 +183,17 @@ public class GeneratorAction extends AbstractAnAction {
                 case "LocalDate", "LocalDateTime" -> {
                     sb.append("timestamp");
                     switch (name) {
-                        case "updateTime", "modifyTime", "modifyAt", "updateAt" -> sb.append(" on update current_timestamp");
-                        case "createTime", "createAt" -> sb.append(" default current_timestamp");
+                        case "update_time", "modify_time", "modify_at", "update_at" -> sb.append(" on update current_timestamp");
+                        case "create_time", "create_at" -> sb.append(" default current_timestamp");
                     }
                 }
-                default -> {
-                    if ("id".equals(name)) {
-                        sb.append(" varchar(64) not null primary key");
-                    } else {
-                        sb.append("varchar(255)");
-                    }
-                }
+                case "Boolean", "boolean" -> sb.append("int(1) default 0");
+                default -> sb.append("varchar(255)");
             }
+
+            // 获取备注信息
+            psiUtils.getAnnotationValue(field.getAnnotation(config.getCommentAnnotation()), "value")
+                    .ifPresent(comment -> sb.append(" comment ").append(comment));
 
             if (i != allFields.length - 1) {
                 sb.append(",\n");
