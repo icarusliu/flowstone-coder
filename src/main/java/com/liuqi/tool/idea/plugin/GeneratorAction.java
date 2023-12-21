@@ -154,23 +154,29 @@ public class GeneratorAction extends AbstractAnAction {
             PsiField field = allFields[i];
             String name = MyStringUtils.toUnderLineStr(field.getName());
             PsiType type = field.getType();
-            sb.append(name).append(" ");
-            if (type.equals(byteType())) {
-                sb.append("bit default 0");
-            } else if (type.equals(charType())) {
-                sb.append("varchar(8)");
-            } else if (type.equals(doubleType()) || type.equals(floatType())) {
-                sb.append("numeric(24, 4)");
-            } else if (type.equals(intType()) || type.equals(shortType())) {
-                sb.append("integer");
-            } else if (type.equals(longType())) {
-                sb.append("bigint");
-            } else {
-                sb.append("varchar(255)");
+            String typeName = type.getCanonicalText();
+            if (typeName.contains(".")) {
+                typeName = typeName.substring(typeName.lastIndexOf(".") + 1);
             }
-
-            if (name.equals("id")) {
-                sb.append(" primary key");
+            sb.append(name).append(" ");
+            switch (typeName) {
+                case "Integer", "int", "Short", "Byte", "byte" -> sb.append("integer");
+                case "Long", "long" -> sb.append("bigint");
+                case "Float", "float", "Double", "double" -> sb.append("Numeric(24, 4)");
+                case "LocalDate", "LocalDateTime" -> {
+                    sb.append("timestamp");
+                    switch (name) {
+                        case "updateTime", "modifyTime", "modifyAt", "updateAt" -> sb.append(" on update current_timestamp");
+                        case "createTime", "createAt" -> sb.append(" default current_timestamp");
+                    }
+                }
+                default -> {
+                    if ("id".equals(name)) {
+                        sb.append(" varchar(64) not null primary key");
+                    } else {
+                        sb.append("varchar(255)");
+                    }
+                }
             }
 
             if (i != allFields.length - 1) {
@@ -202,13 +208,13 @@ public class GeneratorAction extends AbstractAnAction {
             directory.add(resultFile);
         } else {
             XmlTag rootTag = document.getRootTag();
-
             XmlTag changeSet = rootTag.createChildTag("changeSet", null, null, false);
             changeSet.setAttribute("id", "create-table-" + tableName);
             changeSet.setAttribute("author", "codeGenerator");
-            XmlTag sqlTag = changeSet.createChildTag("sql", null, null, false);
-            XmlText text = XmlElementFactory.getInstance(project).createDisplayText(sb.toString());
-            sqlTag.add(text);
+            XmlTag sqlTag = changeSet.createChildTag("sql", null, sb.toString(), false);
+//            XmlText text = XmlElementFactory.getInstance(project).createDisplayText(sb.toString());
+//            sqlTag.add(text);
+            sqlTag.getValue().setText(sb.toString());
             changeSet.add(sqlTag);
             WriteCommandAction.runWriteCommandAction(project, () -> {
                 rootTag.add(changeSet);
