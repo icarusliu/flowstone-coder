@@ -33,7 +33,7 @@
 
   <actions>
     <!-- Add your actions here -->
-    <action class="com.liuqi.tool.idea.plugin.actions.GeneratorAction" id="codeGenerator" text="Code Generator">
+    <action class="com.liuqi.tool.idea.plugin.codegenerator.actions.GeneratorAction" id="codeGenerator" text="Code Generator">
       <add-to-group group-id="ToolsMenu"/>
     </action>
   </actions>
