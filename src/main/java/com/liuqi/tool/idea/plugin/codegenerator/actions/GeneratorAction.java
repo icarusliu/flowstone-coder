@@ -188,7 +188,7 @@ public class GeneratorAction extends AbstractAction {
 
             // 获取备注信息
             psiUtils.getAnnotationValue(field.getAnnotation(config.getCommentAnnotation()), "value")
-                    .ifPresent(comment -> sb.append(" comment \"").append(comment).append("\""));
+                    .ifPresent(comment -> sb.append(" comment '").append(comment).append("'"));
 
             if (i != allFields.length - 1) {
                 sb.append(",\n");
