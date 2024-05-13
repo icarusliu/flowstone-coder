@@ -95,7 +95,8 @@ public class GeneratorAction extends AbstractAction {
 
                 String name = definer.getName().replace("$T$", entityName);
                 String content = definer.getTemplate().replace("$T$", entityName)
-                        .replaceAll("\\$PATH\\$", MyStringUtils.toUnderLineStr(entityName).replaceAll("_", "-"));
+                        .replaceAll("\\$PATH\\$", MyStringUtils.toUnderLineStr(entityName).replaceAll("_", "-"))
+                        .replaceAll("\\$COMMENT\\$", pComment);
                 String like = Optional.ofNullable(definer.getLike())
                         .map(str -> str.replaceAll("\\$T\\$", entityName))
                         .orElse(null);
@@ -151,9 +152,9 @@ public class GeneratorAction extends AbstractAction {
         if (null != idField) {
             PsiType type = idField.getType();
             if (type.getCanonicalText().contains("Long")) {
-                sb.append("id bigint not null primary key auto_increment comment '主键',\n");
+                sb.append("\tid bigint not null primary key auto_increment comment '主键',\n");
             } else {
-                sb.append("id varchar(64) not null primary key comment '主键', \n");
+                sb.append("\tid varchar(64) not null primary key comment '主键', \n");
             }
         }
 
@@ -170,7 +171,7 @@ public class GeneratorAction extends AbstractAction {
             if (typeName.contains(".")) {
                 typeName = typeName.substring(typeName.lastIndexOf(".") + 1);
             }
-            sb.append(name).append(" ");
+            sb.append("\t").append(name).append(" ");
             switch (typeName) {
                 case "Integer", "int", "Short", "Byte", "byte" -> sb.append("integer");
                 case "Long", "long" -> sb.append("bigint");
@@ -249,7 +250,7 @@ public class GeneratorAction extends AbstractAction {
     }
 
     private String getContent(String cName) {
-        return "/** " + cName + " \n * @author Coder Generator"
-                + " " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + " **/\n";
+        return "/** \n" + cName + " \n * @author Coder Generator"
+                + " " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + " \n**/\n";
     }
 }
