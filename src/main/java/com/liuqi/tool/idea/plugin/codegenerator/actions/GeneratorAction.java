@@ -102,7 +102,7 @@ public class GeneratorAction extends AbstractAction {
                         .orElse(null);
 
                 // 增加注释
-                content = this.getContent(pComment + Optional.ofNullable(definer.getComment()).orElse("")) + content;
+                content = this.getComment(pComment + Optional.ofNullable(definer.getComment()).orElse("")) + content;
 
                 log.info("准备生成类，名称：{}, 包：{}", name, cPackage);
 
@@ -249,8 +249,13 @@ public class GeneratorAction extends AbstractAction {
         return directory;
     }
 
-    private String getContent(String cName) {
-        return "/** \n" + cName + " \n * @author Coder Generator"
+    /**
+     * 组装类注释
+     * @param cName 中文名称
+     * @return 类注释内容
+     */
+    private String getComment(String cName) {
+        return "/** \n * " + cName + " \n * @author Coder Generator"
                 + " " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + " \n**/\n";
     }
 }
