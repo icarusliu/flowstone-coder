@@ -65,9 +65,22 @@ public class GeneratorAction extends AbstractAction {
 
         String entityName = aClass.getName().replace("Entity", "");
 
-        if (StringUtils.isBlank(config.getBasePackage())) {
-            this.showError("config.yaml中未配置basePackage");
-            return;
+        if (!StringUtils.isBlank(config.getBasePackage())) {
+            // 未配置basePackage，则取当前Entity类往上两层当成basePackage;
+            String packageName = psiUtils.getPackageName(aClass);
+            String[] arr = packageName.split("\\.");
+            StringBuilder sb = new StringBuilder();
+            if (arr.length <= 2) {
+                this.showError("未配置basePackage");
+                return;
+            }
+            for (int i = 0; i < arr.length - 2; i++) {
+                sb.append(arr[i]);
+                if (i != arr.length - 3) {
+                    sb.append(".");
+                }
+            }
+            config.setBasePackage(sb.toString());
         }
 
         // 获取对应的实体中文名称
