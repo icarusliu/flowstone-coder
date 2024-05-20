@@ -65,7 +65,7 @@ public class GeneratorAction extends AbstractAction {
 
         String entityName = aClass.getName().replace("Entity", "");
 
-        if (!StringUtils.isBlank(config.getBasePackage())) {
+        if (StringUtils.isBlank(config.getBasePackage())) {
             // 未配置basePackage，则取当前Entity类往上两层当成basePackage;
             String packageName = psiUtils.getPackageName(aClass);
             String[] arr = packageName.split("\\.");
