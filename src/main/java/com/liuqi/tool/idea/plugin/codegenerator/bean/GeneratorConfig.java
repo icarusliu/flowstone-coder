@@ -39,6 +39,7 @@ public class GeneratorConfig {
                     .setTableAnnotation(MapUtils.getString(obj, "tableAnnotation"))
                     .setCommentAnnotation(MapUtils.getString(obj, "commentAnnotation"))
                     .setWithLiquibase(MapUtils.getBooleanValue(obj, "withLiquibase", false))
+                    .setPageTemplate(MapUtils.getString(obj, "pageTemplate"))
                     .setLiquibaseFile(MapUtils.getString(obj, "liquibaseFile", "liquibase/master.xml"));
             return config;
         }
@@ -71,6 +72,11 @@ public class GeneratorConfig {
      * 是否包含liquibase
      */
     private Boolean withLiquibase = false;
+
+    /**
+     * 前端页面模板
+     */
+    private String pageTemplate;
 
     /**
      * withLiquibase为true时生效；liquibase的生成语句保存文件，不配置则默认是liquibase/master.xml
@@ -128,6 +134,15 @@ public class GeneratorConfig {
 
     public GeneratorConfig setLiquibaseFile(String liquibaseFile) {
         this.liquibaseFile = liquibaseFile;
+        return this;
+    }
+
+    public String getPageTemplate() {
+        return pageTemplate;
+    }
+
+    public GeneratorConfig setPageTemplate(String pageTemplate) {
+        this.pageTemplate = pageTemplate;
         return this;
     }
 }

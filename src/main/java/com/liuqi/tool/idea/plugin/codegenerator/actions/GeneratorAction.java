@@ -1,10 +1,14 @@
 package com.liuqi.tool.idea.plugin.codegenerator.actions;
 
+import com.intellij.ide.highlighter.HtmlFileType;
 import com.intellij.lang.xml.XMLLanguage;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.command.WriteCommandAction;
+import com.intellij.openapi.fileTypes.UnknownFileType;
 import com.intellij.psi.*;
-import com.intellij.psi.xml.*;
+import com.intellij.psi.xml.XmlDocument;
+import com.intellij.psi.xml.XmlFile;
+import com.intellij.psi.xml.XmlTag;
 import com.liuqi.tool.idea.plugin.codegenerator.bean.ClassDefiner;
 import com.liuqi.tool.idea.plugin.codegenerator.bean.GeneratorConfig;
 import com.liuqi.tool.idea.plugin.codegenerator.utils.ClassCreator;
@@ -19,8 +23,12 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
+import java.util.regex.MatchResult;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -40,7 +48,11 @@ public class GeneratorAction extends AbstractAction {
      */
     private GeneratorConfig config;
 
+    private final Pattern loopFieldsContentPattern = Pattern.compile("(?<=\\$\\$\\$loopFields).*?(?=\\$\\$\\$)");
+
     private static final Logger log = LoggerFactory.getLogger(GeneratorAction.class);
+
+    private final List<String> systemFields = Arrays.asList("id", "createTime", "createBy", "createUser", "updateTime", "updateBy");
 
     @Override
     public synchronized void actionPerformed(@NotNull AnActionEvent anActionEvent) {
@@ -96,6 +108,8 @@ public class GeneratorAction extends AbstractAction {
         // 获取工作目录，即main/java这个目录
         workDir = this.getWorkDir(aClass);
 
+        String path = MyStringUtils.toUnderLineStr(entityName).replaceAll("_", "-");
+
         // 根据配置的类列表进行类的生成
         config.getClasses().forEach(clazz -> {
             ClassDefiner definer = PsiUtils.loadClassDefiner(project, clazz);
@@ -108,7 +122,7 @@ public class GeneratorAction extends AbstractAction {
 
                 String name = definer.getName().replace("$T$", entityName);
                 String content = definer.getTemplate().replace("$T$", entityName)
-                        .replaceAll("\\$PATH\\$", MyStringUtils.toUnderLineStr(entityName).replaceAll("_", "-"))
+                        .replaceAll("\\$PATH\\$", path)
                         .replaceAll("\\$COMMENT\\$", pComment);
                 String like = Optional.ofNullable(definer.getLike())
                         .map(str -> str.replaceAll("\\$T\\$", entityName))
@@ -136,7 +150,77 @@ public class GeneratorAction extends AbstractAction {
 
         // 生成liquibase建表语句
         this.generateLiquibase(config, aClass);
+
+        // 生成前端界面
+        this.generatePage(config, pComment, entityName, path, aClass);
     }
+
+    /**
+     * 生成前端界面
+     *
+     * @param config 生成配置
+     */
+    private void generatePage(GeneratorConfig config, String comment, String entityName, String path, PsiClass aClass) {
+        // 加载前端生成配置文件
+        String pageTemplateFile = config.getPageTemplate();
+        if (StringUtils.isBlank(pageTemplateFile)) {
+            return;
+        }
+
+        ClassDefiner definer = PsiUtils.loadClassDefiner(project, pageTemplateFile);
+        String template = definer.getTemplate();
+        if (StringUtils.isBlank(template)) {
+            return;
+        }
+
+        String dir = Optional.ofNullable(definer.getDir()).orElse("resources/vue");
+        entityName = entityName.substring(0, 1).toLowerCase(Locale.ROOT) + entityName.substring(1);
+        String filePath = dir + "/" + entityName + ".vue";
+        if (null != psiUtils.getResourceFile(filePath)) {
+            return;
+        }
+
+        template = template.replaceAll("\\$COMMENT\\$", comment)
+                .replaceAll("\\$PATH\\$", path);
+
+        // 替换$$$loopFields内容，先获取其中内容，再根据字段列表进行替换处理
+        List<MatchResult> results = loopFieldsContentPattern.matcher(template).results().toList();
+        if (CollectionUtils.isNotEmpty(results)) {
+            // 只处理第一个
+            String group = results.get(0).group();
+            StringBuilder sb = new StringBuilder("\n\t");
+            PsiField @NotNull [] allFields = aClass.getAllFields();
+            for (PsiField field : allFields) {
+                if (systemFields.contains(field.getName())) {
+                    // 系统字段不做处理
+                    continue;
+                }
+
+                String name = psiUtils.getAnnotationValue(field.getAnnotation(config.getCommentAnnotation()), "value")
+                        .orElse("");
+
+                sb.append(
+                        group.replace("$FIELD_NAME$", name)
+                                .replace("$FIELD_PROP$", field.getName())
+                ).append("\n\t");
+            }
+
+            template = template.replaceAll("\\$\\$\\$loopFields.*\\$\\$\\$", sb.toString());
+        }
+
+        template = template.replaceAll("\\$BR\\$", "\n");
+
+        // 保存内容
+        String pTemplate = template;
+        WriteCommandAction.runWriteCommandAction(project, () -> {
+            PsiFile psiDir = psiUtils.getOrCreateResourceFile(filePath);
+            PsiFile resultFile = PsiFileFactory.getInstance(this.project)
+                    .createFileFromText(filePath, HtmlFileType.INSTANCE, pTemplate);
+            psiUtils.format(resultFile);
+            psiDir.add(resultFile);
+        });
+    }
+
 
     /**
      * 生成Liquibase建表语句
@@ -149,8 +233,8 @@ public class GeneratorAction extends AbstractAction {
         // 根据字段生成建表语句，表名从Table或者TableName中获取
         String tableName = psiUtils.getAnnotationValue(aClass.getAnnotation(config.getTableAnnotation()), "value")
                 .orElseGet(() -> {
-                   String name = aClass.getName().replace("Entity", "");
-                   return MyStringUtils.toUnderLineStr(name);
+                    String name = aClass.getName().replace("Entity", "");
+                    return MyStringUtils.toUnderLineStr(name);
                 });
 
         StringBuilder sb = new StringBuilder();
@@ -186,9 +270,9 @@ public class GeneratorAction extends AbstractAction {
             }
             sb.append("\t").append(name).append(" ");
             switch (typeName) {
-                case "Integer", "int", "Short", "Byte", "byte" -> sb.append("integer");
-                case "Long", "long" -> sb.append("bigint");
-                case "Float", "float", "Double", "double" -> sb.append("Numeric(24, 4)");
+                case "Integer", "int", "Short", "Byte", "byte" -> sb.append("integer default 0");
+                case "Long", "long" -> sb.append("bigint default 0");
+                case "Float", "float", "Double", "double" -> sb.append("Numeric(24, 4) default 0");
                 case "LocalDate", "LocalDateTime" -> {
                     sb.append("timestamp");
                     switch (name) {
@@ -224,14 +308,14 @@ public class GeneratorAction extends AbstractAction {
                     "        xmlns=\"http://www.liquibase.org/xml/ns/dbchangelog\"\n" +
                     "        xsi:schemaLocation=\"http://www.liquibase.org/xml/ns/dbchangelog\n" +
                     "        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd\">";
-            content +="<changeSet id=\"init-user\" author=\"test\">\n" +
+            content += "<changeSet id=\"init-user\" author=\"test\">\n" +
                     "        <sql>";
             content += sb + "</sql></changeSet></databaseChangeLog>";
             PsiFile resultFile = PsiFileFactory.getInstance(this.project)
                     .createFileFromText(fileName, XMLLanguage.INSTANCE, content);
             psiUtils.format(resultFile);
             directory.add(resultFile);
-        } else {
+        } else if (!psiFile.getText().contains(tableName)){
             XmlTag rootTag = document.getRootTag();
             XmlTag changeSet = rootTag.createChildTag("changeSet", null, null, false);
             changeSet.setAttribute("id", "create-table-" + tableName);
@@ -264,6 +348,7 @@ public class GeneratorAction extends AbstractAction {
 
     /**
      * 组装类注释
+     *
      * @param cName 中文名称
      * @return 类注释内容
      */
